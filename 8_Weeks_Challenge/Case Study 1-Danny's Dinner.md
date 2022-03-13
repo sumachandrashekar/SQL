@@ -296,6 +296,7 @@ GROUP BY
 
 ### Bonus Question-Join All The Things and recreate as below:
 ![Screenshot](images/DDinner-BonusQ.png)
+
 ```sql
 SELECT s.customer_id, s.order_date, m.product_name, m.price,
    CASE
@@ -308,4 +309,54 @@ LEFT JOIN menu AS m
    ON s.product_id = m.product_id
 LEFT JOIN members AS mm
    ON s.customer_id = mm.customer_id
+```
+
+### Bonus Question-Rank each record orders based on purchase date(null for non-menber days)
+![Screenshot](images/DD-BonusQ-Rank.png)
+
+```sql
+WITH summary_cte AS 
+(
+   SELECT
+      s.customer_id,
+      s.order_date,
+      m.product_name,
+      m.price,
+      CASE
+         WHEN
+            mm.join_date > s.order_date 
+         THEN
+            'N' 
+         WHEN
+            mm.join_date <= s.order_date 
+         THEN
+            'Y' 
+         ELSE
+            'N' 
+      END
+      AS MEMBER 
+   FROM
+      sales AS s 
+      LEFT JOIN
+         menu AS m 
+         ON s.product_id = m.product_id 
+      LEFT JOIN
+         members AS mm 
+         ON s.customer_id = mm.customer_id 
+)
+SELECT
+   *,
+   CASE
+      WHEN
+         MEMBER = 'N' 
+      THEN
+         NULL 
+      ELSE
+         RANK () OVER(PARTITION BY customer_id, MEMBER 
+ORDER BY
+   order_date) 
+   END
+   AS ranking 
+FROM
+   summary_cte;
 ```

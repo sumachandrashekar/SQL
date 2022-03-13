@@ -5,7 +5,7 @@
 > [SQL formatter](https://www.freeformatter.com/sql-formatter.html#ad-output)
 
 ## Problem Statement: [Danny's Dinner](https://8weeksqlchallenge.com/case-study-1/)
-> [Schema file]()
+> [Schema file](https://github.com/sumachandrashekar/SQL/blob/main/8_Weeks_Challenge/SQLSchemas)
 
 ### 1. What is the total amount *each* customer spent at the restaurant?
 
@@ -196,11 +196,116 @@ GROUP BY
 ### 9. If each $1 spent equates to 10 points and sushi has a 2x points multiplier - how many points would each customer have?
 
 ```sql
-
+WITH points_cal AS 
+(
+   SELECT
+      [customer_id],
+      CASE
+         WHEN
+            (
+               m.[product_name]
+            )
+             = 'sushi' 
+         THEN
+            SUM(m.[price]) * 20 
+         ELSE
+            SUM(m.[price])*10 
+      END
+      AS points 
+   FROM
+      [dbo].[sales] s 
+      LEFT JOIN
+         [dbo].[menu] m 
+         ON s.[product_id] = m.[product_id] 
+   GROUP BY
+      [customer_id], m.[product_name] 
+)
+SELECT
+   [customer_id],
+   SUM(points) AS points_earned 
+FROM
+   points_cal 
+GROUP BY
+   [customer_id]
 ```
 
 ### 10. In the first week after a customer joins the program (including their join date) they earn 2x points on all items, not just sushi - how many points do customer A and B have at the end of January?
 
 ```sql
+WITH date_range AS 
+(
+   SELECT
+      me.[customer_id],
+      me.[join_date],
+      dateadd(DAY, 6, me.[join_date]) AS valid_date 
+   FROM
+      [dbo].[members] me 
+)
+,
+points AS 
+(
+   SELECT
+      dr.[customer_id],
+      SUM( 
+      CASE
+         WHEN
+            s.[order_date] < dr.[join_date] 
+            AND m.[product_name] != 'sushi' 
+         THEN
+(m.[price]) *10 
+         WHEN
+            s.[order_date] < dr.[join_date] 
+            AND m.[product_name] = 'sushi' 
+         THEN
+(m.[price]) *20 
+         WHEN
+            s.[order_date] >= dr.[join_date] 
+            AND s.[order_date] <= dr.[valid_date] 
+         THEN
+(m.[price]) *20 
+         WHEN
+            s.[order_date] > dr.[valid_date] 
+            AND [product_name] != 'sushi' 
+         THEN
+(m.[price]) *10 
+         ELSE
+(m.[price]) * 20 
+      END
+) AS points_earned 
+   FROM
+      date_range dr 
+      LEFT JOIN
+         [dbo].[sales] s 
+         ON dr.[customer_id] = s.[customer_id] 
+      LEFT JOIN
+         [dbo].[menu] m 
+         ON m.[product_id] = s.[product_id] 
+   WHERE
+      s.[order_date] <= '2021-01-31' 
+   GROUP BY
+      dr.[customer_id], s.[order_date], dr.[join_date], m.[product_name], m.[price], dr.[valid_date] 
+)
+SELECT
+   [customer_id],
+   SUM(points_earned) AS earned_month 
+FROM
+   points 
+GROUP BY
+   [customer_id]
+```
 
+### Bonus Question-Join All The Things and recreate as below:
+
+```sql
+SELECT s.customer_id, s.order_date, m.product_name, m.price,
+   CASE
+      WHEN mm.join_date > s.order_date THEN 'N'
+      WHEN mm.join_date <= s.order_date THEN 'Y'
+      ELSE 'N'
+      END AS member
+FROM sales AS s
+LEFT JOIN menu AS m
+   ON s.product_id = m.product_id
+LEFT JOIN members AS mm
+   ON s.customer_id = mm.customer_id
 ```

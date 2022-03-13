@@ -295,7 +295,7 @@ GROUP BY
 ```
 
 ### Bonus Question-Join All The Things and recreate as below:
-![Screenshot](.images/DD-BonusQ.png)
+![Screenshot](.images/DDinner-BonusQ.png)
 ```sql
 SELECT s.customer_id, s.order_date, m.product_name, m.price,
    CASE

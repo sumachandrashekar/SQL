@@ -1,14 +1,4 @@
-# SQL Schemas for Case Studies
-
-## Below are the SQL schema scripts for Danny's 8 weeks SQL case study challenge
-
-### Software used: *MS SQL*
-
-## Case Study 1: Danny's Dinner
-
-```sql
-CREATE SCHEMA dannys_diner;
-
+--- Case  Study 1 - Danny's Diner
 CREATE TABLE sales (
   "customer_id" VARCHAR(1),
   "order_date" DATE,
@@ -59,6 +49,3 @@ INSERT INTO members
 VALUES
   ('A', '2021-01-07'),
   ('B', '2021-01-09');
-```
-
-## Case Study 2: Pizza Runner

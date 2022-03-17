@@ -5,7 +5,10 @@
 > [SQL formatter](https://www.freeformatter.com/sql-formatter.html#ad-output)
 
 ## Problem Statement: [Danny's Dinner](https://8weeksqlchallenge.com/case-study-1/)
-> [Schema file](https://github.com/sumachandrashekar/SQL/blob/main/8_Weeks_Challenge/SQLSchemas)
+
+> [Schema file](SQLSchema/CaseStudy_1_Danny_Diner.sql)
+
+> [ER Image]()
 
 ### 1. What is the total amount *each* customer spent at the restaurant?
 

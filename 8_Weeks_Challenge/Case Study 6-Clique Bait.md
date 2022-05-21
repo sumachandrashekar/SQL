@@ -4,7 +4,7 @@
 
 ![Schema file](SQLSchema/CaseStudy_6_Clique_Bait.sql)
 
-![ER Image]()
+![SQL playground](https://www.db-fiddle.com/f/jmnwogTsUE8hGqkZv9H7E8/17)
 
 ## 2. Digital Analysis
 
@@ -13,25 +13,61 @@ Using the available datasets - answer the following questions using a single que
 ### 1. How many users are there?
 
 ```sql
-
+SELECT
+   COUNT(DISTINCT user_id) 
+FROM
+   clique_bait.users
 ```
 
 ### 2. How many cookies does each user have on average?
 
 ```sql
-
+WITH cte AS 
+(
+   SELECT
+      user_id,
+      COUNT(cookie_id) AS nocookie 
+   FROM
+      clique_bait.users 
+   GROUP BY
+      user_id 
+)
+SELECT
+   round(AVG(nocookie), 0) AS avg_cookies 
+FROM
+   cte
 ```
 
 ### 3. What is the unique number of visits by all users per month?
 
 ```sql
-
+SELECT
+   COUNT(DISTINCT visit_id) AS unique_visits,
+   EXTRACT(MONTH 
+FROM
+   event_time) AS visti_month 
+FROM
+   clique_bait.events 
+GROUP BY
+   EXTRACT(MONTH 
+FROM
+   event_time) 
+ORDER BY
+   2 
 ```
 
 ### 4. What is the number of events for each event type?
 
 ```sql
-
+SELECT
+   event_type,
+   COUNT(*) AS number_of_events 
+FROM
+   clique_bait.events 
+GROUP BY
+   event_type 
+ORDER BY
+   event_type
 ```
 
 ### 5. What is the percentage of visits which have a purchase event?
@@ -111,7 +147,7 @@ Use your 2 new output tables - answer the following questions:
 
 Generate a table that has 1 single row for every unique ==visit_id== record and has the following columns:
 
-* ==user_id==
+* user_id
 * visit_id
 * visit_start_time: the earliest event_time for each visit
 * page_views: count of page views for each visit
@@ -122,11 +158,11 @@ Generate a table that has 1 single row for every unique ==visit_id== record and 
 * click: count of ad clicks for each visit
 * ***(Optional column)*** cart_products: a comma separated text value with products added to the cart sorted by the order they were added to the cart (hint: use the sequence_number)
 
-Use the subsequent dataset to generate at least 5 insights for the Clique Bait team - bonus: prepare a single A4 infographic that the team can use for their management reporting sessions, be sure to emphasise the most important points from your findings.
+Use the subsequent dataset to generate at least 5 insights for the Clique Bait team - bonus: prepare a single A4 infographic that the team can use for their management reporting sessions, be sure to emphasize the most important points from your findings.
 
 Some ideas you might want to investigate further include:
 
 * Identifying users who have received impressions during each campaign period and comparing each metric with other users who did not have an impression event
 * Does clicking on an impression lead to higher purchase rates?
 * What is the uplift in purchase rate when comparing users who click on a campaign impression versus users who do not receive an impression? What if we compare them with users who just an impression but do not click?
-* What metrics can you use to quantify the success or failure of each campaign compared to eachother?
+* What metrics can you use to quantify the success or failure of each campaign compared to each other?

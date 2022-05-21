@@ -34,13 +34,13 @@ Most questions can be answered using a single query however some questions are m
 
 ```
 
-### 5. Summarise the id values in the fresh_segments.interest_map by its total record count in this table
+### 5. Summarize the id values in the fresh_segments.interest_map by its total record count in this table
 
 ```sql
 
 ```
 
-### 6. What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where interest_id = 21246 in your joined output and include all columns from fresh_segments.interest_metrics and all columns from fresh_segments.interest_map except from the id column.
+### 6 What sort of table join should we perform for our analysis and why? Check your logic by checking the rows where interest_id = 21246 in your joined output and include all columns from fresh_segments. interest_metrics and all columns from fresh_segments.interest_map except from the id column.
 
 ```sql
 
@@ -72,7 +72,7 @@ Most questions can be answered using a single query however some questions are m
 
 ```
 
-### 4. Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
+### 4 Does this decision make sense to remove these data points from a business perspective? Use an example where there are all 14 months present to a removed interest example for your arguments - think about what it means to have less months present from a segment perspective.
 
 ```sql
 
@@ -142,9 +142,8 @@ Average composition can be calculated by dividing the composition column by the 
 
 ### 4. What is the 3 month rolling average of the max average composition value from September 2018 to August 2019 and include the previous top ranking interests in the same output shown below.
 
-
 ```sql
 
 ```
 
-Provide a possible reason why the max average composition might change from month to month? Could it signal something is not quite right with the overall business model for Fresh Segments?
+Provide a possible reason why the max average composition might change from month to month. Could it signal something is not quite right with the overall business model for Fresh Segments?

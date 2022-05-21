@@ -2,13 +2,15 @@
 
 > [Markdown style guide ref](https://www.markdownguide.org/basic-syntax/#:~:text=To%20bold%20text%2C%20add%20two,without%20spaces%20around%20the%20letters.&text=I%20just%20love%20**bold%20text**)
 
+> [Markdown post from Leetcode](https://leetcode.com/discuss/general-discussion/1560831/Answer-Formatting-Cheatsheet-Markdown-%2B-LC-Features)
+
 > [SQL formatter](https://www.freeformatter.com/sql-formatter.html#ad-output)
 
 ## Problem Statement: [Danny's Dinner](https://8weeksqlchallenge.com/case-study-1/)
 
 > [Schema file](SQLSchema/CaseStudy_1_Danny_Diner.sql)
 
-> [ER Image]()
+> [ER Image](images/CaseStudy1_ERDiagram.png)
 
 ### 1. What is the total amount *each* customer spent at the restaurant?
 

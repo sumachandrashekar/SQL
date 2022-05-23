@@ -2,9 +2,9 @@
 
 ## Problem Statement: [Balanced Tree Clothing](https://8weeksqlchallenge.com/case-study-7/)
 
-![Schema file](SQLSchema/CaseStudy_7_BalancedTreeClothing.sql)
+[Schema file](SQLSchema/CaseStudy_7_BalancedTreeClothing.sql)
 
-![SQL Playground](https://www.db-fiddle.com/f/dkhULDEjGib3K58MvDjYJr/8)
+[SQL Playground](https://www.db-fiddle.com/f/dkhULDEjGib3K58MvDjYJr/8)
 
 ### PostgreSQL used for data analysis
 
@@ -363,17 +363,80 @@ GROUP BY
 ### 9. What is the total transaction “penetration” for each product? (hint: penetration = number of transactions where at least 1 quantity of a product was purchased divided by total number of transactions)
 
 ```sql
-select sal.prod_id, 100 * (count(distinct txn_id) ---rework
-/(select count(distinct txn_id) from balanced_tree.sales))
-as txn_cnt
-from balanced_tree.sales sal
-where sal.qty>=1
-group by  sal.prod_id
+SELECT
+   prod.product_name,
+   COUNT(DISTINCT sal.txn_id) AS transac_cnt,
+   round(100*( COUNT(DISTINCT sal.txn_id)::NUMERIC / (
+   SELECT
+      COUNT(DISTINCT txn_id) 
+   FROM
+      sales)), 2) AS percentage 
+   FROM
+      sales sal 
+      LEFT JOIN
+         product_details prod 
+         ON sal.prod_id = prod.product_id 
+   GROUP BY
+      prod.product_name
 ```
 
 ### 10. What is the most common combination of at least 1 quantity of any 3 products in a 1 single transaction?
 
 ```sql
+WITH three_prod AS 
+(
+   SELECT
+      sal.txn_id 
+   FROM
+      sales sal 
+   GROUP BY
+      sal.txn_id 
+   HAVING
+      COUNT(sal.prod_id) >= 3 
+)
+,
+prod_aggr AS 
+(
+   SELECT
+      string_agg(prod.product_name, ',' 
+   ORDER BY
+      product_name) AS prod_combo 
+   FROM
+      sales sal 
+      LEFT JOIN
+         product_details prod 
+         ON sal.prod_id = prod.product_id 
+   WHERE
+      txn_id IN 
+      (
+         SELECT
+            * 
+         FROM
+            three_prod
+      )
+   GROUP BY
+      txn_id 
+)
+,
+ranking AS 
+(
+   SELECT
+      prod_combo,
+      COUNT(*),
+      DENSE_RANK() OVER (
+   ORDER BY
+      COUNT(prod_combo) DESC) AS rnk 
+   FROM
+      prod_aggr 
+   GROUP BY
+      prod_combo 
+)
+SELECT
+   * 
+FROM
+   ranking 
+WHERE
+   rnk = 1
 
 ```
 
@@ -389,10 +452,32 @@ Feel free to split up your final outputs into as many tables as you need - but b
 
 ## Bonus Challenge
 
-Use a single SQL query to transform the ```product_hierarchy``` and ```product_prices``` datasets to the product_details table.
+Use a single SQL query to transform the *product_hierarchy* and *product_prices* datasets to the product_details table.
 
 Hint: you may want to consider using a recursive CTE to solve this problem!
 
 ```sql
+with recursive prod_details as (
+  select id, parent_id, level_text, level_name
+  from product_hierarchy 
+  
+  union all
+  select ph.id, ph.parent_id+1, ph.level_text, ph.level_name
+  from product_hierarchy ph
+  inner join prod_details pd on pd.parent_id=ph.id
 
+ 
+  )
+  ,prod_price as (
+    select pd.*, pp.price
+    from prod_details pd 
+    left join product_prices pp on pd.id=pp.id
+    )
+select  max(case when (level_name='Category') then level_text else NULL end) as Category,
+max(case when (level_name='Segment') then level_text else NULL end) as Segment,
+max(case when (level_name='Style') then level_text else NULL end) as Style,
+ price
+from prod_price
+group by price
+order by 2
 ```

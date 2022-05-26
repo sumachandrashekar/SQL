@@ -6,6 +6,8 @@
 
 ![SQL playground](https://www.db-fiddle.com/f/jmnwogTsUE8hGqkZv9H7E8/17)
 
+### Status: Completed
+
 ## 2. Digital Analysis
 
 Using the available datasets - answer the following questions using a single query for each one:
@@ -113,35 +115,24 @@ Additionally, create another table which further aggregates the data for the abo
 
 Use your 2 new output tables - answer the following questions:
 
+### First table code:
+
+```sql
+
+```
+
+### Second table code: 
+
+```sql
+
+```
+
+The above two tables can answer the questions asked below:
 ### 1. Which product had the most views, cart adds and purchases?
-
-```sql
-
-```
-
 ### 2. Which product was most likely to be abandoned?
-
-```sql
-
-```
-
 ### 3. Which product had the highest view to purchase percentage?
-
-```sql
-
-```
-
 ### 4. What is the average conversion rate from view to cart add?
-
-```sql
-
-```
-
 ### 5. What is the average conversion rate from cart add to purchase?
-
-```sql
-
-```
 
 ## 3. Campaigns Analysis
 

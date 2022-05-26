@@ -4,13 +4,11 @@
 
 > [Schema file](SQLSchema/CaseStudy_2_PizzaRunner.sql)
 
-Ref: <https://github.com/katiehuangx/8-Week-SQL-Challenge>
-
 > [SQL playground](https://www.db-fiddle.com/f/7VcQKQwsS3CTkGRFG7vu98/65)
 
 > [ER Image](images/CaseStudy2_ERDiagram.png)
 
-<https://github.com/iaks23/8WeekSqlChallenge/tree/main/Week%202%20-%20Pizza%20Runner>
+### *Status: Completed*
 
 ## A. Pizza Metrics
 
@@ -218,22 +216,70 @@ GROUP BY
 What was the average time in minutes it took for each runner to arrive at the Pizza Runner HQ to pickup the order?
 
 ```sql
-WITH DATECOVERT AS ( ---rework
-  select TO_DATE(pickup_time,'YYYY/MM/DD') as pickup_minutes,runner_id 
-FROM pizza_runner.runner_orders
-  WHERE DISTANCE!='null'
-  )
-  SELECT AVG(date_part('MINUTE',pickup_minutes)) AS AVG_MINUTES,
-  runner_id
-  from 
-DATECOVERT
-group by runner_id
+WITH runner_time AS 
+(
+   SELECT
+      ro.runner_id,
+      EXTRACT(EPOCH 
+   FROM
+      (
+         ro.pickup_time::TIMESTAMP - co.order_time
+      )
+) / 60 AS pickup_minutes 
+   FROM
+      runner_orders ro 
+      LEFT JOIN
+         customer_orders co 
+         ON ro.order_id = co.order_id 
+   WHERE
+      pickup_time NOT IN
+      (
+         'null'
+      )
+)
+SELECT
+   AVG(pickup_minutes) AS avg_pickup 
+FROM
+   runner_time
 ```
 
 Is there any relationship between the number of pizzas and how long the order takes to prepare?
 
 ```sql
-
+WITH prep_time AS 
+(
+   SELECT
+      co.order_id,
+      COUNT(pizza_id) AS pizzas_ordered,
+      EXTRACT(EPOCH 
+   FROM
+      (
+         ro.pickup_time::TIMESTAMP - co.order_time
+      )
+) / 60 AS pickup_minutes 
+   FROM
+      runner_orders ro 
+      LEFT JOIN
+         customer_orders co 
+         ON ro.order_id = co.order_id 
+   WHERE
+      pickup_time NOT IN
+      (
+         'null'
+      )
+   GROUP BY
+      1,
+      3 
+)
+SELECT
+   pizzas_ordered,
+   AVG(pickup_minutes) 
+FROM
+   prep_time 
+GROUP BY
+   1 
+ORDER BY
+   pizzas_ordered DESC
 ```
 
 What was the average distance traveled for each customer?
@@ -285,13 +331,63 @@ pizza_runner.runner_orders
 What was the average speed for each runner for each delivery and do you notice any trend for these values?
 
 ```sql
-
+WITH prep_time AS 
+(
+   SELECT
+      co.order_id,
+      co.customer_id,
+      ro.runner_id,
+      EXTRACT(EPOCH 
+   FROM
+      (
+         ro.pickup_time::TIMESTAMP - co.order_time
+      )
+) / 60 AS pickup_minutes 
+   FROM
+      runner_orders ro 
+      LEFT JOIN
+         customer_orders co 
+         ON ro.order_id = co.order_id 
+   WHERE
+      pickup_time NOT IN
+      (
+         'null'
+      )
+   GROUP BY
+      1,
+      2,
+      3,
+      4 
+)
+SELECT
+   * 
+FROM
+   prep_time 
+ORDER BY
+   customer_id
 ```
 
 What is the successful delivery percentage for each runner?
 
 ```sql
-
+SELECT
+   runner_id,
+   ROUND(100 * SUM( 
+   CASE
+      WHEN
+         distance = 'null' 
+      THEN
+         0 
+      ELSE
+         1 
+   END
+) / COUNT(*), 0) AS success_perc 
+FROM
+   runner_orders 
+GROUP BY
+   runner_id 
+ORDER BY
+   runner_id
 ```
 
 C. Ingredient Optimization
@@ -299,42 +395,70 @@ C. Ingredient Optimization
 What are the standard ingredients for each pizza?
 
 ```sql
-with ingredient as ( ---rework
-SELECT  (REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER) as 
-toppings_id, count(*) as count_toppings
-FROM pizza_runner.pizza_recipes 
-group by 1
-order by 2 desc
-  )
-  select pt.topping_name from ingredient i
-  left join pizza_runner.pizza_toppings pt on pt.topping_id=i.toppings_id
-  where count_toppings=2
+WITH ingredient AS 
+(
+   SELECT
+(REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER) AS toppings_id,
+      COUNT(*) AS pizza_count 
+   FROM
+      pizza_runner.pizza_recipes 
+   GROUP BY
+      1 
+   ORDER BY
+      2 DESC 
+)
+SELECT
+   pt.topping_name,
+   count_toppings 
+FROM
+   ingredient i 
+   LEFT JOIN
+      pizza_runner.pizza_toppings pt 
+      ON pt.topping_id = i.toppings_id 
+ORDER BY
+   count_toppings DESC
 ```
 
 What was the most commonly added extra?
 
 ```sql
-with ingredient as (
-SELECT  (REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER) as 
-toppings_id, count(*) as count_toppings
-FROM pizza_runner.pizza_recipes 
-group by 1
-order by 2 desc
-  )
-  select pt.topping_name from ingredient i
-  left join pizza_runner.pizza_toppings pt on pt.topping_id=i.toppings_id
- order by count_toppings desc
+WITH ingredient AS 
+(
+   SELECT
+(REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER) AS toppings_id,
+      COUNT(*) AS count_toppings 
+   FROM
+      pizza_runner.pizza_recipes 
+   GROUP BY
+      1 
+   ORDER BY
+      2 DESC 
+)
+SELECT
+   pt.topping_name 
+FROM
+   ingredient i 
+   LEFT JOIN
+      pizza_runner.pizza_toppings pt 
+      ON pt.topping_id = i.toppings_id 
+ORDER BY
+   count_toppings DESC
 ```
 
 What was the most common exclusion?
 
 ```sql
-select exclusions, count(*) as exclusion_occurrences
-from pizza_runner.customer_orders co
-where exclusions!='null'
-group by exclusions
-order by 2 desc
-limit 1
+SELECT
+   exclusions,
+   COUNT(*) AS exclusion_occurrences 
+FROM
+   pizza_runner.customer_orders co 
+WHERE
+   exclusions != 'null' 
+GROUP BY
+   exclusions 
+ORDER BY
+   2 DESC LIMIT 1
 ```
 
 Generate an order item for each record in the customers_orders table in the format of one of the following:
@@ -345,18 +469,15 @@ Generate an order item for each record in the customers_orders table in the form
 * Meat Lovers - Exclude Cheese, Bacon - Extra Mushroom, Peppers
 
 ```sql
-with ingredient as (
-SELECT  (REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER) as 
-toppings_id,pizza_id 
-FROM pizza_runner.pizza_recipes 
-) 
-select * from ingredient 
-/*
-select order_id, 
-case when pn.pizza_name='MeatLovers' and 
-from pizza_runner.customer_orders co
-left join pizza_runner.pizza_names pn on co.pizza_id=pn.pizza_id
-left join pizza_toppings pt on pt.topping_id=
+select order_id, customer_id, pizza_id, 
+case when 
+pt.topping_name!='Bacon' and pt.topping_name!='Cheese' and co.
+case when 
+from customer_orders co
+left join pizza_name pn on co.pizza_id=pn.pizza_id
+left join pizza_recipes pr on pn.pizza_id=pr.pizza_id
+left join pizza_toppings pt on pr.toppings=pt.topping_id
+where pn.pizza_name ='MeatLovers'
 */
 ```
 
@@ -370,7 +491,35 @@ For example: "Meat Lovers: 2xBacon, Beef, ... , Salami"
 What is the total quantity of each ingredient used in all delivered pizzas sorted by most frequent first?
 
 ```sql
-
+SELECT
+   pt.topping_name,
+   (
+      REGEXP_SPLIT_TO_TABLE(toppings, '[,\s]+')::INTEGER
+   )
+   AS toppings_id,
+   COUNT(pt.topping_id) AS topping_cnt 
+FROM
+   customer_orders co 
+   LEFT JOIN
+      runner_orders ro 
+      ON co.order_id = ro.order_id 
+   LEFT JOIN
+      pizza_names pn 
+      ON co.pizza_id = pn.pizza_id 
+   LEFT JOIN
+      pizza_recipes pr 
+      ON pn.pizza_id = pr.pizza_id 
+   LEFT JOIN
+      pizza_toppings pt 
+      ON pr.toppings = pt.topping_name 
+WHERE
+   ro.distance NOT IN 
+   (
+      'null'
+   )
+GROUP BY
+   1,
+   2
 ```
 
 D. Pricing and Ratings

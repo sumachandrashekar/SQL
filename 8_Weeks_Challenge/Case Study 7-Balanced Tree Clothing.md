@@ -6,7 +6,7 @@
 
 [SQL Playground](https://www.db-fiddle.com/f/dkhULDEjGib3K58MvDjYJr/8)
 
-### PostgreSQL used for data analysis
+### Staus: In Progress
 
 The following questions can be considered key business questions and metrics that the Balanced Tree team requires for their monthly reports.
 

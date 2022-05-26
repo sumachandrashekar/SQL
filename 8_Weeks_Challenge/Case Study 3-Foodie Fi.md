@@ -8,6 +8,8 @@
 
 ![SQL playground](https://www.db-fiddle.com/f/rHJhRrXy5hbVBNJ6F6b9gJ/16)
 
+### Status: In Progress
+
 ## A. Customer Journey
 
 Based off the 8 sample customers provided in the sample from the subscriptions table, write a brief description about each customer’s onboarding journey.
@@ -271,33 +273,50 @@ FROM
 ### 10. Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
 
 ```sql
-with initial_plan as ( ---rework
-  SELECT s.customer_id, p.plan_name,min(s.start_date) as join_date
-  
-FROM subscriptions s
-join plans p using (plan_id)
-  where p.plan_name<>'pro annual'
-  group by s.customer_id, p.plan_name
-  )
-,annual_plan as (
-  SELECT s.customer_id, p.plan_name,s.start_date as annual_date
-  
-FROM subscriptions s
-join plans p using (plan_id)
-  where p.plan_name='pro annual'
-  
-  )
-  select count(*) as customer_count,
-  case when (annual_date-join_date) <= 30 then '0 - 30 days'
-  when (annual_date-join_date) between 31 and 60 then '31 - 60 days'
-  when (annual_date-join_date) between 61 and 90 then '61 - 90 days'
-  when (annual_date-join_date) between 91 and 120 then '91 - 120 days'
-   when (annual_date-join_date) between 121 and 180 then '121 - 180 days'
-  else 'greater than 180 days' end as days_bucket
-  from annual_plan a
-  left join initial_plan i on a.customer_id=i.customer_id
-  group by 2
-  order by 2
+-- Filter results to customers at trial plan = 0
+WITH trial_plan AS 
+(
+   SELECT
+      customer_id,
+      start_date AS trial_date 
+   FROM
+      foodie_fi.subscriptions 
+   WHERE
+      plan_id = 0 
+)
+,
+-- Filter results to customers at pro annual plan = 3
+annual_plan AS 
+(
+   SELECT
+      customer_id,
+      start_date AS annual_date 
+   FROM
+      foodie_fi.subscriptions 
+   WHERE
+      plan_id = 3 
+)
+,
+-- Sort values above in buckets of 12 with range of 30 days each
+bins AS 
+(
+   SELECT
+      WIDTH_BUCKET(ap.annual_date - tp.trial_date, 0, 360, 12) AS avg_days_to_upgrade 
+   FROM
+      trial_plan tp 
+      JOIN
+         annual_plan ap 
+         ON tp.customer_id = ap.customer_id
+)
+SELECT
+((avg_days_to_upgrade - 1) * 30 || ' - ' || (avg_days_to_upgrade) * 30) || ' days' AS breakdown,
+   COUNT(*) AS customers 
+FROM
+   bins 
+GROUP BY
+   avg_days_to_upgrade 
+ORDER BY
+   avg_days_to_upgrade;
 ```
 
 ### 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
@@ -364,24 +383,38 @@ At plan level, %increase in paying customers.
 ```text
 * MAU
 * DAU/MAU
-* Retention rate
 * Churn rate
+* Annual Recurring Revenue(ARR) and Monthly Recurring Revenue(MRR)
+* Average Revenue per User(ARPU)
+* Customer Acquisition Costs(CAC)
+* Trial Conversion Rate
+* Customer Lifetime Value(CLTV)
+* LTV:CAC ratio
+* Repeat Purchase Ratio
+* Existing customer revenue growth rate
+* 60-180-360 day retention rate
 ```
 
 ### 3. What are some key customer journeys or experiences that you would analyse further to improve customer retention?
 
 ```text
-
+* Funnel drop offs across the app
+* UX improvement
+* Pricing and promotional analysis
+* Retention curves
+* Demographic and organic traffic source analysis
 ```
 
 ### 4. If the Foodie-Fi team were to create an exit survey shown to customers who wish to cancel their subscription, what questions would you include in the survey?
 
 ```text
-
+1. Why do you want to cancel the subscription?
+2. Are there any other alternatives you are considering in place of Foodie-Fi?
+3. Would you like to take part in an in-depth personal survey to give us more feedback?
 ```
 
 ### 5. What business levers could the Foodie-Fi team use to reduce the customer churn rate? How would you validate the effectiveness of your ideas?
 
 ```text
-
+Validate effectiveness through increase in 30-90-180 day retention rate.
 ```

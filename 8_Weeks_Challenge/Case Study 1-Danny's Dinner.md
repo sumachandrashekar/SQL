@@ -12,6 +12,8 @@
 
 > [ER Image](images/CaseStudy1_ERDiagram.png)
 
+### *Status: Completed*
+
 ### 1. What is the total amount *each* customer spent at the restaurant?
 
 ```sql

@@ -6,6 +6,10 @@
 
 ![ER Image](images/CaseStudy4_ERDiagram.png)
 
+![SQL playground](https://www.db-fiddle.com/f/2GtQz4wZtuNNu7zXH5HtV4/3)
+
+### Status: Completed
+
 ## A. Customer Nodes Exploration
 
 ### 1. How many unique nodes are there on the Data Bank system?
@@ -240,70 +244,242 @@ GROUP BY
 
 ### 4. What is the closing balance for each customer at the end of the month?
 
-```sql ---Rework using this website: <https://stackoverflow.com/questions/42054472/opening-and-closing-balance-query>
----You have calculated for each month instead of running calculation
-WITH CREDIT_DEBIT AS (
-  select cn.customer_id, EXTRACT(MONTH FROM ct.txn_date) AS MONTH_NUMBER,
-case when ct.txn_type='withdrawal' or ct.txn_type='purchase' then (-1.0)*sum(ct.txn_amount) end as debit,
-case when ct.txn_type='deposit' then sum(ct.txn_amount) end as credit
-   FROM data_bank.customer_transactions ct 
-   left join data_bank.customer_nodes cn on ct.customer_id=
-   cn.customer_id
+```sql
+---Using this website: <https://stackoverflow.com/questions/42054472/opening-and-closing-balance-query>
+-- CTE 1 - To identify transaction amount as an inflow (+) or outflow (-)
+WITH monthly_balances AS 
+(
+   SELECT
+      customer_id,
+      (
+         DATE_TRUNC('month', txn_date) + INTERVAL '1 MONTH - 1 DAY'
+      )
+      AS closing_month,
+      txn_type,
+      txn_amount,
+      SUM(
+      CASE
+         WHEN
+            txn_type = 'withdrawal' 
+            OR txn_type = 'purchase' 
+         THEN
+( - txn_amount) 
+         ELSE
+            txn_amount 
+      END
+) AS transaction_balance 
+   FROM
+      data_bank.customer_transactions 
+   GROUP BY
+      customer_id, txn_date, txn_type, txn_amount 
+)
+, -- CTE 2 - To generate txn_date as a series of last day of month for each customer
+last_day AS 
+(
+   SELECT DISTINCT
+      customer_id,
+      (
+         '2020-01-31'::DATE + GENERATE_SERIES(0, 3) * INTERVAL '1 MONTH'
+      )
+      AS ending_month 
+   FROM
+      data_bank.customer_transactions 
+)
+,
+-- CTE 3 - Create closing balance for each month using Window function SUM() to add changes during the month
+solution_t1 AS 
+(
+   SELECT
+      ld.customer_id,
+      ld.ending_month,
+      COALESCE(mb.transaction_balance, 0) AS monthly_change,
+      SUM(mb.transaction_balance) OVER (PARTITION BY ld.customer_id 
+   ORDER BY
+      ld.ending_month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS closing_balance 
+   FROM
+      last_day ld 
       LEFT JOIN
-         data_bank.regions n 
-         ON cn.region_id = n.region_id
- group by     cn.customer_id, EXTRACT(MONTH FROM ct.txn_date),
- ct.txn_type
- ORDER BY 1,2 ASC
-         
-  )
-  SELECT customer_id, MONTH_NUMBER, SUM(debit)-SUM(credit) as Closing_Balance ---write wind func here
-  from CREDIT_DEBIT
-  group by 1,2 
-  order by 1,2 asc
-   
+         monthly_balances mb 
+         ON ld.ending_month = mb.closing_month 
+         AND ld.customer_id = mb.customer_id 
+)
+,
+-- CTE 4 - Use Window function ROW_NUMBER() to rank transactions within each month
+solution_t2 AS 
+(
+   SELECT
+      customer_id,
+      ending_month,
+      monthly_change,
+      closing_balance,
+      ROW_NUMBER() OVER (PARTITION BY customer_id, ending_month 
+   ORDER BY
+      ending_month) AS record_no 
+   FROM
+      solution_t1 
+)
+,
+-- CTE 5 - Use Window function LEAD() to query value in next row and retrieve NULL for last row
+solution_t3 AS 
+(
+   SELECT
+      customer_id,
+      ending_month,
+      monthly_change,
+      closing_balance,
+      record_no,
+      LEAD(record_no) OVER (PARTITION BY customer_id, ending_month 
+   ORDER BY
+      ending_month) AS lead_no 
+   FROM
+      solution_t2 
+)
+SELECT
+   customer_id,
+   ending_month,
+   monthly_change,
+   closing_balance,
+   CASE
+      WHEN
+         lead_no IS NULL 
+      THEN
+         record_no 
+   END
+   AS criteria 
+FROM
+   solution_t3 
+WHERE
+   lead_no IS NULL
 ```
 
 ### 5. What is the percentage of customers who increase their closing balance by more than 5%?
 
 ```sql
-
-```
-
-## C. Data Allocation Challenge
-
-To test out a few different hypotheses - the Data Bank team wants to run an experiment where different groups of customers would be allocated data using 3 different options:
-
-Option 1: data is allocated based off the amount of money at the end of the previous month
-Option 2: data is allocated on the average amount of money kept in the account in the previous 30 days
-Option 3: data is updated real-time
-For this multi-part challenge question - you have been requested to generate the following data elements to help the Data Bank team estimate how much data will need to be provisioned for each option:
-
-running customer balance column that includes the impact each transaction
-customer balance at the end of each month
-minimum, average and maximum values of the running balance for each customer
-Using all of the data available - how much data would have been required for each option on a monthly basis?
-
-```sql
-
-```
-
-## D. Extra Challenge
-
-Data Bank wants to try another option which is a bit more difficult to implement - they want to calculate data growth using an interest calculation, just like in a traditional savings account you might have with a bank.
-
-If the annual interest rate is set at 6% and the Data Bank team wants to reward its customers by increasing their data allocation based off the interest calculated on a daily basis at the end of each day, how much data would be required for this option on a monthly basis?
-
-Special notes:
-
-Data Bank wants an initial calculation which does not allow for compounding interest, however they may also be interested in a daily compounding interest calculation so you can try to perform this calculation if you have the stamina!
-Extension Request
-The Data Bank team wants you to use the outputs generated from the above sections to create a quick Powerpoint presentation which will be used as marketing materials for both external investors who might want to buy Data Bank shares and new prospective customers who might want to bank with Data Bank.
-
-Using the outputs generated from the customer node questions, generate a few headline insights which Data Bank might use to market it’s world-leading security features to potential investors and customers.
-
-With the transaction analysis - prepare a 1 page presentation slide which contains all the relevant information about the various options for the data provisioning so the Data Bank management team can make an informed decision.
-
-```sql
-
+-- Create temp table #1 using solution from Question 4
+-- Create temp table #1 using solution from Question 4
+-- Create temp table #1 using solution from Question 4
+CREATE TEMP TABLE q5 AS 
+(
+   WITH monthly_balances AS 
+   (
+      SELECT
+         customer_id,
+         (
+            DATE_TRUNC('month', txn_date) + INTERVAL '1 MONTH - 1 DAY'
+         )
+         AS closing_month,
+         txn_type,
+         txn_amount,
+         SUM(
+         CASE
+            WHEN
+               txn_type = 'withdrawal' 
+               OR txn_type = 'purchase' 
+            THEN
+( - txn_amount) 
+            ELSE
+               txn_amount 
+         END
+) AS transaction_balance 
+      FROM
+         data_bank.customer_transactions 
+      GROUP BY
+         customer_id, txn_date, txn_type, txn_amount 
+   )
+, last_day AS 
+   (
+      SELECT DISTINCT
+         customer_id,
+         (
+            '2020-01-31'::DATE + GENERATE_SERIES(0, 3) * INTERVAL '1 MONTH'
+         )
+         AS ending_month 
+      FROM
+         data_bank.customer_transactions 
+   )
+,
+   solution_t1 AS 
+   (
+      SELECT
+         ld.customer_id,
+         ld.ending_month,
+         COALESCE(mb.transaction_balance, 0) AS monthly_change,
+         SUM(mb.transaction_balance) OVER (PARTITION BY ld.customer_id 
+      ORDER BY
+         ld.ending_month ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS closing_balance 
+      FROM
+         last_day ld 
+         LEFT JOIN
+            monthly_balances mb 
+            ON ld.ending_month = mb.closing_month 
+            AND ld.customer_id = mb.customer_id 
+   )
+,
+   solution_t2 AS 
+   (
+      SELECT
+         customer_id,
+         ending_month,
+         monthly_change,
+         closing_balance,
+         ROW_NUMBER() OVER (PARTITION BY customer_id, ending_month 
+      ORDER BY
+         ending_month) AS record_no 
+      FROM
+         solution_t1 
+   )
+,
+   solution_t3 AS 
+   (
+      SELECT
+         customer_id,
+         ending_month,
+         monthly_change,
+         closing_balance,
+         record_no,
+         LEAD(record_no) OVER (PARTITION BY customer_id, ending_month 
+      ORDER BY
+         ending_month) AS lead_no 
+      FROM
+         solution_t2 
+   )
+   SELECT
+      customer_id,
+      ending_month,
+      monthly_change,
+      closing_balance,
+      CASE
+         WHEN
+            lead_no IS NULL 
+         THEN
+            record_no 
+      END
+      AS criteria 
+   FROM
+      solution_t3 
+   WHERE
+      lead_no IS NULL
+)
+;
+-- Create temp table #2
+CREATE TEMP TABLE q5_sequence AS 
+(
+   SELECT
+      customer_id,
+      ending_month,
+      closing_balance,
+      ROW_NUMBER() OVER (PARTITION BY customer_id 
+   ORDER BY
+      ending_month) AS sequence 
+   FROM
+      q5
+)
+;
+SELECT
+   * 
+FROM
+   q5_sequence 
+WHERE
+   sequence = 1 
+   AND closing_balance::TEXT LIKE '-%';
 ```
